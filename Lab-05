@@ -1,0 +1,57 @@
+import numpy as np
+import math
+
+
+def objective_function(x):
+ 
+    return np.sum(x ** 2)
+
+
+def levy_flight(Lambda):
+    sigma1 = (math.gamma(1 + Lambda) * math.sin(math.pi * Lambda / 2) /
+              (math.gamma((1 + Lambda) / 2) * Lambda * 2 ** ((Lambda - 1) / 2))) ** (1 / Lambda)
+    u = np.random.randn() * sigma1
+    v = np.random.randn()
+    step = u / (abs(v) ** (1 / Lambda))
+    return step
+
+def cuckoo_search(n=20, dim=2, lb=-5, ub=5, pa=0.25, iterations=100):
+  
+    nests = np.random.uniform(lb, ub, (n, dim))
+    fitness = np.array([objective_function(x) for x in nests])
+    best_index = np.argmin(fitness)
+    best = nests[best_index].copy()
+
+    for t in range(iterations):
+        for i in range(n):
+         
+            step_size = 0.01 * levy_flight(1.5) * (nests[i] - best)
+            new_sol = nests[i] + step_size * np.random.randn(dim)
+            new_sol = np.clip(new_sol, lb, ub)
+            f_new = objective_function(new_sol)
+
+            if f_new < fitness[i]:
+                nests[i] = new_sol
+                fitness[i] = f_new
+
+
+        K = np.random.rand(n, dim) > pa
+        random_nests = np.random.uniform(lb, ub, (n, dim))
+        nests = nests * K + random_nests * (1 - K)
+
+        fitness = np.array([objective_function(x) for x in nests])
+        current_best_index = np.argmin(fitness)
+
+        if fitness[current_best_index] < objective_function(best):
+            best = nests[current_best_index].copy()
+
+        if t % 10 == 0 or t == iterations - 1:
+            print(f"Iteration {t+1}/{iterations}, Best Fitness: {objective_function(best):.6f}")
+
+    print("\n Best Solution:", best)
+    print(" Best Fitness:", objective_function(best))
+    return best, objective_function(best)
+
+
+if __name__ == "__main__":
+    best_solution, best_fitness = cuckoo_search(n=25, dim=3, iterations=100)
